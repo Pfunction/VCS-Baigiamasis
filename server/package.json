@@ -7,7 +7,7 @@
   "scripts": {
     "start": "nodemon app.js",
     "dev": "node app.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "vitest"
   },
   "author": "Your Name",
   "license": "MIT",
@@ -20,7 +20,9 @@
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.8.3",
     "morgan": "^1.10.0",
-    "nodemailer": "^6.9.16"
+    "nodemailer": "^6.9.16",
+    "supertest": "^7.0.0",
+    "vitest": "^2.1.8"
   },
   "devDependencies": {
     "nodemon": "^3.1.7"

@@ -3,7 +3,72 @@ import Tools from '../models/product.js';
 import mongoose from 'mongoose';
 import User from '../models/User.js';
 
+
+
 export const procureReservations = async (req, res) => {
+
+    // Is userData paimamas userId (id is JWT tokeno)
+    const { userId, role } = req.userData;
+    try {
+      // Suranda visas rezervacijas pagal userId
+      let reservations;
+      if (role === 'admin'){
+      reservations = await Reservation.find()
+      .populate('product', 'description nameRetail')
+      .select('product quantity dateRange _id toolType tool status pickupLocation contactName contactEmail contactPhone')
+      .exec();
+      } else{
+       reservations = await Reservation.find({userId: userId})
+      .populate('product', 'description nameRetail')
+      .select('product quantity dateRange _id toolType tool status pickupLocation contactName contactEmail contactPhone')
+      .exec();
+      }
+  
+      // Grazina rezultata su rezervaciju sarasu
+      res.status(200).json({
+        count: reservations.length,
+        reservations: reservations.map((reservation) => ({
+          _id: reservation._id,
+          product: reservation.product,
+          quantity: reservation.quantity,
+          dateRange: reservation.dateRange,
+          toolType: reservation.toolType,
+          tool: reservation.tool,
+          pickupLocation: reservation.pickupLocation,
+          contactName: reservation.contactName,
+          contactEmail: reservation.contactEmail,
+          contactPhone: reservation.contactPhone,
+          status: reservation.status,
+          request: {
+            type: 'GET',
+            url: `http://localhost:3000/reservations/${reservation._id}`
+          }
+        }))
+      });
+    } catch (err) {
+      // Klaida grazina 500 statusa
+      res.status(500).json({ error: err.message });
+    }
+  }
+  export const procureReservation = async (req, res) => {
+    try {
+      console.log('Reservation ID:', req.params.reservationId);
+    console.log('User ID:', req.userData.userId);
+      // Suranda rezervacija pagal id
+      const reservation = await Reservation.findOne({
+        _id: req.params.reservationId,
+        userId: req.userData.userId
+      }).exec();
+    
+
+      if (!reservation) {
+        return res.status(404).json({ message: 'Reservation not found' });
+      }
+  
+      // Grazina rezervacijos informacija
+      res.status(200).json({
+        reservation: reservation,
+
   // Is userData paimamas userId (id is JWT tokeno)
   const { userId } = req.userData;
   try {
@@ -25,6 +90,7 @@ export const procureReservations = async (req, res) => {
         contactEmail: reservation.contactEmail,
         contactPhone: reservation.contactPhone,
         status: reservation.status,
+
         request: {
           type: 'GET',
           url: `http://localhost:3000/reservations/${reservation._id}`
@@ -36,21 +102,7 @@ export const procureReservations = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
-export const procureReservation = async (req, res) => {
-  try {
-    const reservation = await Reservation.findById(req.params.reservationId).populate('product', 'description nameRetail').exec();
 
-    if (!reservation) {
-      return res.status(404).json({ message: 'Reservation not found' });
-    }
-
-    res.status(200).json({
-      reservation: reservation
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
 export const procureUserReservations = async (req, res) => {
   try {
     const reservations = await Reservation.find({
@@ -178,31 +230,37 @@ export const eradicateReservation = async (req, res) => {
     // Grazina klaidos pranesima
     res.status(500).json({ error: err.message });
   }
+  
+  export const reformReservation = async (req, res) => {
+    try {
+      const { status } = req.body;
+      const reservationId = req.params.reservationId;
+      const updateData = req.body;
+  
+      console.log('Updating reservation with ID:', reservationId);
+      console.log('Update data:', updateData);
+  
+      const reservation = await Reservation.findById(reservationId);
+      if (!reservation) {
+        return res.status(404).json({ message: 'Reservation not found' });
+      }
+  
+      if (typeof updateData === 'string') {
+        console.log('Only status update detected.');
+      } else {
+        await Reservation.findByIdAndUpdate(reservationId, updateData, { new: true });
+      }
+  
+      reservation.status = status;
+      const updatedReservation = await reservation.save();
+  
+      res.status(200).json({
+        message: 'Reservation updated successfully',
+        reservation: updatedReservation,
+      });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  };
 };
-export const reformReservation = async (req, res) => {
-  try {
-    const { status } = req.body;
-    const id = req.params.reservationId;
-    const updateOps = req.body;
-    const reservation = await Reservation.findById(req.params.reservationId);
-    if (typeof updateOps === 'string') {
-      return console.log('No data apart reservation status was used');
-    } else {
-      await Reservation.findByIdAndUpdate({ _id: id }, updateOps, { new: true });
-    }
-    if (!reservation) {
-      return res.status(404).json({ message: 'Reservation not found' });
-    }
-    console.log('one', reservation);
-    reservation.status = status;
-    const updatedReservation = await reservation.save();
-    console.log('two', updatedReservation);
 
-    res.status(200).json({
-      message: 'Reservation status updated successfully',
-      reservation: updatedReservation
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
